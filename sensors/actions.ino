@@ -63,15 +63,15 @@ void forward() {
   bool rideFlag = true, blackSquare = false;
   int32_t localTime = 0, deltaTime;
   bool normalTS = true;
-  float light = 0;
+  double light = 0;
   int16_t buffH[2] = { 0, 0 };
   horizont = 0;
   while (rideFlag) {
     readMc();
-    if (micros() > myTimer + tS) {
+    if (millis() > myTimer + tS) {
       //рассчитать время, успевание программы
-      deltaTime = micros() - myTimer;
-      myTimer = micros();
+      deltaTime = millis() - myTimer;
+      myTimer = millis();
       if (!normalTS) {
         Serial.println("это жесть, задержка " + String(deltaTime) + " мкс.");
       }
@@ -87,7 +87,7 @@ void forward() {
             corrLocalVirt += double(virtEnc[0] + virtEnc[1] - encoders[0] - encoders[1]) * cos(gyro[0] - staticGyro) * cos(gyro[1]) / 2;
             if (abs(corrLocalVirt - oldLocalVirt) < maxCorr) {
               oldLocalVirt = corrLocalVirt;
-              localTime = xToT(oldLocalVirt, squareEnc, vMax, aMax) * 1000000;
+              localTime = xToT(oldLocalVirt, squareEnc, vMax, aMax) * 1000;
             }
           }
           for (int i = 0; i < sizeof(forwardDist) / sizeof(forwardDist[0]) - 1; i++) {
@@ -95,7 +95,7 @@ void forward() {
             corrLocalVirt += double(virtEnc[0] + virtEnc[1] - encoders[0] - encoders[1]) * cos(gyro[0] - staticGyro) * cos(gyro[1]) / 2;
             if (abs(corrLocalVirt - oldLocalVirt) < maxCorr) {
               oldLocalVirt = corrLocalVirt;
-              localTime = xToT(oldLocalVirt, squareEnc, vMax, aMax) * 1000000;
+              localTime = xToT(oldLocalVirt, squareEnc, vMax, aMax) * 1000;
             }
           }
         } else {
@@ -103,10 +103,10 @@ void forward() {
         }
         //рассчитать виртуальную точку по времени
         localTime += deltaTime;
-        localVirt = tToX(double(localTime) / 1000000, squareEnc, vMax, aMax);
-        if (oldLocalVirt < 0 || (localVirt - oldLocalVirt) < vMin * double(deltaTime) / 1000000) {
-          localVirt = oldLocalVirt + vMin * double(deltaTime) / 1000000;
-          localTime = xToT(localVirt, squareEnc, vMax, aMax) * 1000000;
+        localVirt = tToX(double(localTime) / 1000, squareEnc, vMax, aMax);
+        if (oldLocalVirt < 0 || (localVirt - oldLocalVirt) < vMin * double(deltaTime) / 1000) {
+          localVirt = oldLocalVirt + vMin * double(deltaTime) / 1000;
+          localTime = xToT(localVirt, squareEnc, vMax, aMax) * 1000;
           localVirt = min(localVirt, squareEnc);
         }
         deltaEnc = (localVirt - oldLocalVirt) / cos(gyro[0] - staticGyro) / cos(gyro[1]);
@@ -124,13 +124,13 @@ void forward() {
         vU += (staticGyro - gyro[0]) * kGyro;
         virtEnc[0] += deltaEnc;
         virtEnc[1] += deltaEnc;
-        virtEnc[0] += vU * double(deltaTime) / 1000000;
-        virtEnc[1] -= vU * double(deltaTime) / 1000000;
+        virtEnc[0] += vU * double(deltaTime) / 1000;
+        virtEnc[1] -= vU * double(deltaTime) / 1000;
       }
       //отослать значения целевых точек на проц моторов
       writeMc();
       //проверка, не пора ли выходить из цикла
-      if (timeToGo(squareEnc, vMax, aMax) * 1000000 - 1 < localTime) {
+      if (timeToGo(squareEnc, vMax, aMax) * 1000 - 1 < localTime) {
         Serial.println(localTime);
         rideFlag = false;
       }
@@ -145,6 +145,7 @@ void forward() {
         visitSet(1, rbtPos[0], rbtPos[1], rbtPos[2]);
         typeSet(1, rbtPos[0] + xP(rbtPos[3]), rbtPos[1] + yP(rbtPos[3]), rbtPos[2]);
         localVirt -= double(virtEnc[0] + virtEnc[1] - encoders[0] - encoders[1]) * cos(gyro[0] - staticGyro) * cos(gyro[1]) / 2;
+        oldLocalVirt = localVirt;
         fastStop();
         while (roofGet(rbtPos[0], rbtPos[1], rbtPos[2], 0) || roofGet(rbtPos[0], rbtPos[1], rbtPos[2], 1)) {
           nBlacks++;
@@ -157,7 +158,7 @@ void forward() {
           rbtPos[1] = toRange(rbtPos[1] - yP(rbtPos[3]), yMax);
         }
         forwardEnc(-localVirt - nBlacks * squareEnc);
-        myTimer = micros();
+        myTimer = millis();
         blackSquare = true;
       }
       //объезд кирпича
@@ -165,13 +166,14 @@ void forward() {
       switches[1] = digitalRead(forwBut[1]);
       if (lasers[0] > extremeStraightDist[0] && (switches[0] ^ switches[1])) {
         localVirt -= double(virtEnc[0] + virtEnc[1] - encoders[0] - encoders[1]) * cos(gyro[0] - staticGyro) * cos(gyro[1]) / 2;
+        oldLocalVirt = localVirt;
         fastStop();
         forwardEnc(-2 * brickEnc);
         turnAngle(brickAngle * (2 * switches[0] - 1));
         forwardEnc(brickEnc / cos(brickAngle));
         turnAngle(-brickAngle * (2 * switches[0] - 1));
         forwardEnc(brickEnc);
-        myTimer = micros();
+        myTimer = millis();
       }
       //спасательные комплекты
       readCam();
@@ -181,6 +183,7 @@ void forward() {
               && !nowHelps[toRange(rbtPos[3] + (i * 2) - 1, 4)] && visibleH[i] != 0) {
             nowHelps[toRange(rbtPos[3] + (i * 2) - 1, 4)] = 1;
             localVirt -= double(virtEnc[0] + virtEnc[1] - encoders[0] - encoders[1]) * cos(gyro[0] - staticGyro) * cos(gyro[1]) / 2;
+            oldLocalVirt = localVirt;
             fastStop();
             throwHelps(visibleH[i], i * 2 - 1);
           }
@@ -272,11 +275,11 @@ void turnAngle(double angle, bool detect = false) {
   int16_t buffH[2] = { 0, 0 };
   while (rideFlag) {
     readMc();
-    if (micros() > myTimer + tS) {
-      Serial.println(String(timeToGo(distance, vMaxTurn, aMaxTurn) * 1000000) + " " + String(localTime));
+    if (millis() > myTimer + tS) {
+      Serial.println(String(timeToGo(distance, vMaxTurn, aMaxTurn) * 1000) + " " + String(localTime));
       //рассчитать время, успевание программы
-      deltaTime = micros() - myTimer;
-      myTimer = micros();
+      deltaTime = millis() - myTimer;
+      myTimer = millis();
       if (!normalTS) {
         Serial.println("это жесть, задержка " + String(deltaTime) + " мкс.");
       }
@@ -287,13 +290,13 @@ void turnAngle(double angle, bool detect = false) {
         //подкорректировать положение виртуальной точки
         oldLocalVirt = (gyro[0] - staticGyro) * kRadEnc;
         oldLocalVirt += double(virtEnc[0] - virtEnc[1] - encoders[0] + encoders[1]) / 2;
-        localTime = xToT(oldLocalVirt, distance, vMaxTurn, aMaxTurn) * 1000000;
+        localTime = xToT(oldLocalVirt, distance, vMaxTurn, aMaxTurn) * 1000;
         //рассчитать виртуальную точку по времени
         localTime += deltaTime;
-        localVirt = tToX(double(localTime) / 1000000, distance, vMaxTurn, aMaxTurn);
-        if (oldLocalVirt * distance < 0 || (localVirt - oldLocalVirt) * sgn(distance) < vMinTurn * double(deltaTime) / 1000000) {
-          localVirt = oldLocalVirt + vMinTurn * sgn(distance) * double(deltaTime) / 1000000;
-          localTime = xToT(localVirt, distance, vMaxTurn, aMaxTurn) * 1000000;
+        localVirt = tToX(double(localTime) / 1000, distance, vMaxTurn, aMaxTurn);
+        if (oldLocalVirt * distance < 0 || (localVirt - oldLocalVirt) * sgn(distance) < vMinTurn * double(deltaTime) / 1000) {
+          localVirt = oldLocalVirt + vMinTurn * sgn(distance) * double(deltaTime) / 1000;
+          localTime = xToT(localVirt, distance, vMaxTurn, aMaxTurn) * 1000;
           localVirt = min(localVirt * sgn(distance), abs(distance)) * sgn(distance);
         }
         deltaEnc = localVirt - oldLocalVirt;
@@ -304,7 +307,7 @@ void turnAngle(double angle, bool detect = false) {
       //отослать значения целевых точек на проц моторов
       writeMc();
       //проверка, не пора ли выходить из цикла
-      if (timeToGo(distance, vMaxTurn, aMaxTurn) * 1000000 - 1 < localTime) {
+      if (timeToGo(distance, vMaxTurn, aMaxTurn) * 1000 - 1 < localTime) {
         rideFlag = false;
       }
       if (detect) {
@@ -354,12 +357,12 @@ void forwardEnc(int32_t dEnc) {
   Serial.println(virtEnc[0]);
   while (rideFlag) {
     readMc();
-    if (micros() > myTimer + tS) {
+    if (millis() > myTimer + tS) {
       Serial.println("bbb");
       Serial.println(String(encoders[0]) + " " + String(virtEnc[0]) + " " + String(localVirt) + " " + String(localTime));
       //рассчитать время, успевание программы
-      deltaTime = micros() - myTimer;
-      myTimer = micros();
+      deltaTime = millis() - myTimer;
+      myTimer = millis();
       if (!normalTS) {
         Serial.println("это жесть, задержка " + String(deltaTime) + " мкс.");
       }
@@ -369,10 +372,10 @@ void forwardEnc(int32_t dEnc) {
       if ((abs(virtEnc[0] - encoders[0]) + abs(virtEnc[1] - encoders[1])) / 2 < deltaEncMax) {
         //рассчитать виртуальную точку по времени
         localTime += deltaTime;
-        localVirt = tToX(double(localTime) / 1000000, dEnc, vMax, aMax);
-        if (oldLocalVirt * dEnc < 0 || (localVirt - oldLocalVirt) * sgn(dEnc) < vMin * double(deltaTime) / 1000000) {
-          localVirt = oldLocalVirt + vMin * sgn(dEnc) * double(deltaTime) / 1000000;
-          localTime = xToT(localVirt, dEnc, vMax, aMax) * 1000000;
+        localVirt = tToX(double(localTime) / 1000, dEnc, vMax, aMax);
+        if (oldLocalVirt * dEnc < 0 || (localVirt - oldLocalVirt) * sgn(dEnc) < vMin * double(deltaTime) / 1000) {
+          localVirt = oldLocalVirt + vMin * sgn(dEnc) * double(deltaTime) / 1000;
+          localTime = xToT(localVirt, dEnc, vMax, aMax) * 1000;
           localVirt = min(localVirt * sgn(dEnc), abs(dEnc)) * sgn(dEnc);
         }
         deltaEnc = (localVirt - oldLocalVirt) / cos(gyro[0] - staticGyro) / cos(gyro[1]);
@@ -382,13 +385,13 @@ void forwardEnc(int32_t dEnc) {
         Serial.println(deltaEnc);
         virtEnc[0] += deltaEnc;
         virtEnc[1] += deltaEnc;
-        virtEnc[0] += vU * double(deltaTime) / 1000000;
-        virtEnc[1] -= vU * double(deltaTime) / 1000000;
+        virtEnc[0] += vU * double(deltaTime) / 1000;
+        virtEnc[1] -= vU * double(deltaTime) / 1000;
       }
       //отослать значения целевых точек на проц моторов
       writeMc();
       //проверка, не пора ли выходить из цикла
-      if (timeToGo(dEnc, vMax, aMax) * 1000000 - 1 < localTime) {
+      if (timeToGo(dEnc, vMax, aMax) * 1000 - 1 < localTime) {
         rideFlag = false;
       }
     } else {
@@ -415,16 +418,16 @@ void getFirstValues() {
   digitalWrite(13, 1);
   static bool ok = false;
   while (!ok) {
-    if (myTimer + tS > micros()) {
+    if (myTimer + tS > millis()) {
       readLasers();
-      myTimer = micros();
+      myTimer = millis();
       writeMc();
     }
     ok = readMc();
   }
   digitalWrite(13, 0);
   while (Serial1.available() || Serial2.available()) readCam();
-  myTimer = micros();
+  myTimer = millis();
 }
 
 void readCam() {
@@ -432,8 +435,8 @@ void readCam() {
   while (Serial2.available()) visibleH[0] = Serial2.read() - int(zeroSymb);
 }
 
-float colorCos(int x1, int y1, int z1, int x2, int y2, int z2) {
-  static float l1, l2, l3;
+double colorCos(int x1, int y1, int z1, int x2, int y2, int z2) {
+  static double l1, l2, l3;
   l1 = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
   l2 = sqrt(x2 * x2 + y2 * y2 + z2 * z2);
   l3 = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2));
@@ -450,10 +453,10 @@ void resetGyro() {
   bool normalTS = true, rideFlag = true;
   while (rideFlag) {
     readMc();
-    if (micros() > myTimer + tS) {
+    if (millis() > myTimer + tS) {
       //рассчитать время, успевание программы
-      deltaTime = micros() - myTimer;
-      myTimer = micros();
+      deltaTime = millis() - myTimer;
+      myTimer = millis();
       if (!normalTS) {
         Serial.println("это жесть, задержка " + String(deltaTime) + " мкс.");
       }
@@ -461,7 +464,7 @@ void resetGyro() {
       //прочитать значения лазеров
       readLasers();
       if ((abs(virtEnc[0] - encoders[0]) + abs(virtEnc[1] - encoders[1])) / 2 < deltaEncMax) {
-        deltaEnc = double(deltaTime) / 1000000 * vReset;
+        deltaEnc = double(deltaTime) / 1000 * vReset;
         virtEnc[0] += (1 - digitalRead(forwBut[0])) * deltaEnc;
         virtEnc[1] += (1 - digitalRead(forwBut[1])) * deltaEnc;
       }
@@ -475,16 +478,16 @@ void resetGyro() {
     }
   }
   fastStop();
-  waitMicros(delayReset);
+  waitmillis(delayReset);
   getFirstValues();
   zeroGyro[0] += gyro[0] - staticGyro;
   rideFlag = true;
   while (rideFlag) {
     readMc();
-    if (micros() > myTimer + tS) {
+    if (millis() > myTimer + tS) {
       //рассчитать время, успевание программы
-      deltaTime = micros() - myTimer;
-      myTimer = micros();
+      deltaTime = millis() - myTimer;
+      myTimer = millis();
       if (!normalTS) {
         Serial.println("это жесть, задержка " + String(deltaTime) + " мкс.");
       }
@@ -492,12 +495,12 @@ void resetGyro() {
       //прочитать значения лазеров
       readLasers();
       if ((abs(virtEnc[0] - encoders[0]) + abs(virtEnc[1] - encoders[1])) / 2 < deltaEncMax) {
-        deltaEnc = -double(deltaTime) / 1000000 * vReset;
+        deltaEnc = -double(deltaTime) / 1000 * vReset;
         vU = (staticGyro - gyro[0]) * kGyro;
         virtEnc[0] += deltaEnc;
         virtEnc[1] += deltaEnc;
-        virtEnc[0] += vU * double(deltaTime) / 1000000;
-        virtEnc[1] -= vU * double(deltaTime) / 1000000;
+        virtEnc[0] += vU * double(deltaTime) / 1000;
+        virtEnc[1] -= vU * double(deltaTime) / 1000;
       }
       //отослать значения целевых точек на проц моторов
       writeMc();
@@ -512,14 +515,14 @@ void resetGyro() {
   fastStop();
 }
 
-void waitMicros(int32_t waitTime) {
+void waitmillis(int32_t waitTime) {
   static int32_t localTimer;
   localTimer = myTimer;
-  while (localTimer + waitTime > micros()) {
+  while (localTimer + waitTime > millis()) {
     readMc();
-    if (micros() > myTimer + tS) {
+    if (millis() > myTimer + tS) {
       readLasers();
-      myTimer = micros();
+      myTimer = millis();
       writeMc();
     }
   }
@@ -532,15 +535,15 @@ void throwHelps(int16_t type, int8_t orient) {
       strip.setPixelColor(i, strip.Color(255 * ((j + 1) % 2), 0, 0));  //  Set pixel's color (in RAM)
     }
     strip.show();
-    waitMicros(5000000 / 2 / nFlash);
+    waitmillis(5000000 / 2 / nFlash);
   }
   for (int i = 0; i < helps[type]; i++) {
     Serial.println(String(i) + " " + String(type) + " " + String(helps[type]));
     if (numHelps < numHelpsMax) {
       myServo.write(srednServo * (2 - orient) / 2);
-      waitMicros(500000);
+      waitmillis(500000);
       myServo.write(srednServo + 10 * orient);
-      waitMicros(500000);
+      waitmillis(500000);
       numHelps++;
     }
   }

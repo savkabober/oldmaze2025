@@ -71,7 +71,7 @@ bool errSerial = 0;
 uint8_t fifoBuffer[64];  // буфер
 float ypr[3], myYpr[3], oldYpr[3];
 uint32_t myTimer;
-const uint32_t Ts = 5000;
+const uint32_t Ts = 5;
 float corr = 0;
 uint32_t oldTime;
 float kYR = 1.05;
@@ -88,7 +88,7 @@ DataFromSerial fromSerial;
 MOTORS motor[4];
 
 void setup() {
-  myTimer = micros() + 2000000;
+  myTimer = millis() + 2000;
   // put your setup code here, to run once:
   motor[0].attach(motorPins[0], motorPins[1], kMotor, kiMotor);
   motor[1].attach(motorPins[2], motorPins[3], kMotor, kiMotor);
@@ -128,7 +128,7 @@ void setup() {
 
   mpu.setDMPEnabled(true);
 
-  oldTime = micros();
+  oldTime = millis();
   // Serial.println("aaa");
 }
 
@@ -151,9 +151,9 @@ void loop() {
     Serial.println();
   }
 
-  if (micros() > Ts + myTimer && deltaN < deltaNMax) {
+  if (millis() > Ts + myTimer && deltaN < deltaNMax) {
     writeSerial();
-    myTimer = micros();
+    myTimer = millis();
     deltaN++;
   }
 
@@ -165,7 +165,7 @@ void loop() {
     deltaN = max(deltaN - 1, 0);
     if (!readSerial()) Serial.println("err with Serial2");
     for (int i = 0; i < 2; i++) {
-      // fromSerial.encMotor[i] = constrain(micros() * 0.0001 * (2 * i - 1), -580, 580);
+      // fromSerial.encMotor[i] = constrain(millis() * 0.0001 * (2 * i - 1), -580, 580);
       for (int j = 0; j < 2; j++) {
         motor[i * 2 + j].setAngle(fromSerial.encMotor[i]);
         if (abs(motor[i * 2 + 1].returnEnc() - motor[i * 2].returnEnc()) > dMax && abs(motor[i * 2 + j].returnEnc() - fromSerial.encMotor[i]) < abs(motor[i * 2 + 1 - j].returnEnc() - fromSerial.encMotor[i])) {
@@ -181,11 +181,11 @@ void loop() {
 
 
   for (int i = 0; i < 4; i++) {
-    motor[i].regAngle(micros() - oldTime);
+    motor[i].regAngle(millis() - oldTime);
     // Serial.print(motor[i].returnEnc());
     // Serial.print(" ");
   }
-  oldTime = micros();
+  oldTime = millis();
 }
 
 bool readSerial() {

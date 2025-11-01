@@ -38,11 +38,11 @@ void setID() {
 
 void readLasers() {
   static int32_t debugTimer;
-  debugTimer = micros();
+  debugTimer = millis();
   for (int i = 0; i < sizeof(lox_shts) / sizeof(lox_shts[0]); i++) {
     lasers[i] = kFilterLaser * (lox[i].readRangeContinuousMillimeters()) + lasers[i] * (1 - kFilterLaser);
   }
-  debugTimer = micros() - debugTimer;
+  debugTimer = millis() - debugTimer;
   // Serial.println(debugTimer);
 }
 

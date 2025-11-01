@@ -41,7 +41,7 @@ int16_t lox_mosfets[6] = { 22, 23, 24, A13, A14, A15 };
 int16_t lox_adresses[6] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36 };
 int16_t lox_shts[6] = { 31, 32, 33, 30, 35, 34 };
 int16_t lasers[6];
-const int32_t tS = 10000;
+const int32_t tS = 10;
 bool errSerial = false;
 int16_t vMax = 5000, aMax = 5000, squareEnc = 1000, maxCorr = 100, forwButStop = 200, vMin = 400, blackStartEnc = 200, brickEnc = 150, aMaxTurn = 5000, vMinTurn = 300, vMaxTurn = 5000, vReset = 400;
 int32_t myTimer;
@@ -58,8 +58,8 @@ int8_t dLevel = 0, nowHelps[4] = {0, 0, 0, 0};
 int8_t switches[2] = { 0, 0 };
 int16_t nBlacks;
 double virtEnc[2] = { 0, 0 };
-int32_t delayReset = 500000;
-int16_t nMaxGyro = 3, nGyro = 0, visibleH[2] = {0, 0}, nFlash = 5, nLights = 13, helps[6] = { 2, 0, 3, 0, 1, 1 }, numHelps = 0, numHelpsMax = 12;
+int32_t delayReset = 500;
+int16_t nMaxGyro = 2, nGyro = 0, visibleH[2] = {0, 0}, nFlash = 5, nLights = 13, helps[6] = { 2, 0, 3, 0, 1, 1 }, numHelps = 0, numHelpsMax = 12;
 char zeroSymb = '0';
 int16_t srednServo = 100, servoPin = 5, dServo = 10;
 
@@ -90,7 +90,7 @@ Adafruit_NeoPixel strip(ledCount, ledPin, NEO_GRB);
 
 void setup() {
   pinMode(13, OUTPUT);
-  myTimer = micros() + 2000000;
+  myTimer = millis() + 2000;
   Serial.begin(115200);
   Serial1.begin(115200);
   Serial2.begin(115200);
